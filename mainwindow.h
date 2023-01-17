@@ -1,14 +1,13 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
-//#include <QMainWindow>
 #include <QWidget>
 #include <QString>
-
 #include <xiApi.h>
 
+
 class QFileDialog;
-class QLabel;
+class ImageLabel;
 class QLineEdit;
 class QPushButton;
 class QComboBox;
@@ -29,7 +28,7 @@ public:
     void toggleVideoRecording();
 
 private:
-    QLabel* imageLabel_;
+    ImageLabel* imageLabel_;
     QComboBox* cameraSelector_;
     QLineEdit* exposureValueEdit_;
     QLineEdit* gainValueEdit_;
@@ -51,7 +50,6 @@ private:
     QString generateFilePath_(bool isVideo = false);
     QStringList enumerateCameras_();
 
-//    bool cameraConnected_ = false;
     HANDLE cameraHandle_ = nullptr;
     QTimer* cameraTimer_;
     int cameraExposure_;

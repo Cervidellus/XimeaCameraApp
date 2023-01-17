@@ -16,33 +16,20 @@
 #include <opencv2/videoio.hpp>
 #include <opencv2/imgproc.hpp>
 
-//Done
-//Get exposure lineedit working... also put constraints on input
+#include <imagelabel.h>
 
-//saving of images and videos
-    //Add a directory selector(done)
-    //have qlineedits for base names of video and images(done)
-    //connect image save button to saving the image.(done)
-    //connect the record button to starting and stopping a video recording.
-
-//Figure out how to enumerate cameras.
-
-//NExt:
-
-//Add camera selector functionality.. for this, have connectCamera work from the widget.
+//Next:
 
 //scaling of image (need to reimplement paint function... https://stackoverflow.com/questions/40139306/qt-qlabel-scale-image-with-window
 
-//Figure out how to enumerate cameras.
-
-//adding binning option
+//adding binning option, other options
 
 //Prettify the layouts.
 
 
 MainWindow::MainWindow(QWidget *parent)
     : QWidget(parent),
-      imageLabel_(new QLabel()),
+      imageLabel_(new ImageLabel()),
       cameraSelector_(new QComboBox(this)),
       exposureValueEdit_(new QLineEdit(this)),
       gainValueEdit_(new QLineEdit(this)),
@@ -57,9 +44,7 @@ MainWindow::MainWindow(QWidget *parent)
 {
     //Setup UI
     QVBoxLayout* mainLayout = new QVBoxLayout(this);
-    imageLabel_->setMinimumSize(500,500);
-    imageLabel_->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum);
-    imageLabel_->setScaledContents(true);
+        imageLabel_->setMinimumSize(500,500);
     mainLayout->addWidget(imageLabel_);
 
         QHBoxLayout* bottomLayout = new QHBoxLayout(this);
@@ -87,7 +72,7 @@ MainWindow::MainWindow(QWidget *parent)
                 savePathEdit_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Minimum);
                 IOLayout->addWidget(savePathEdit_, 0, 1);
                 browsePathButton_->setText("Browse");
-                IOLayout->addWidget(browsePathButton_, 0,3);
+                IOLayout->addWidget(browsePathButton_, 0,2);
 
                 //append integer. QLabel"append integer to filename
 
@@ -146,11 +131,9 @@ MainWindow::~MainWindow()
 }
 
 void MainWindow::connectCamera_(){
-//    QString cameraString = cameraSelector_->currentText();
-    int cameraIndex = cameraSelector_->currentText().split(":").first().toInt();
-    XI_RETURN cameraStatus = xiOpenDevice(0, &cameraHandle_);
+    xiOpenDevice(0, &cameraHandle_);
     setDefaultParams_();
-    cameraStatus = xiStartAcquisition(cameraHandle_);//
+    XI_RETURN cameraStatus = xiStartAcquisition(cameraHandle_);//
     if (cameraStatus != XI_OK) { handleXimeaError_(cameraStatus, "connectCamera");}
 
     cameraTimer_->setInterval(cameraExposure_/100);
@@ -195,11 +178,12 @@ void MainWindow::updateImage_(){
                &rawImageData[inputLine*ximeaImage.width],
                 ximeaImage.width * 4);
     }
-    imageLabel_->setPixmap(QPixmap::fromImage(outputImage));
+
+    imageLabel_->setImage(outputImage);
 
     if(videoWriter_){
-        cv::Mat outputMat = cv::Mat(cv::Size(imageLabel_->pixmap().width(),
-                                             imageLabel_->pixmap().height()),
+        cv::Mat outputMat = cv::Mat(cv::Size(ximeaImage.width,
+                                             ximeaImage.height),
                                              CV_8UC4,
                                              ximeaImage.bp);
         cv::cvtColor(outputMat, outputMat, cv::COLOR_RGBA2RGB);
