@@ -24,12 +24,12 @@ public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
-    void saveImage();
     void toggleVideoRecording();
 
 private:
     ImageLabel* imageLabel_;
     QComboBox* cameraSelector_;
+    QComboBox* binningSelector_;
     QLineEdit* exposureValueEdit_;
     QLineEdit* gainValueEdit_;
     QLineEdit* savePathEdit_;
@@ -43,9 +43,11 @@ private:
 
     //Connect the first available camera.
     //GUI will allow you to select another, and will restrict you to only those that are available.
-    void connectCamera_();
+    void connectCamera_(int index);
+    void disconnectCamera_();
     void handleXimeaError_(XI_RETURN cameraStatus, QString callingMethod);
-    void setDefaultParams_();
+    void setParams_();
+    void setBinning_(int binningLevel);
     void updateImage_();
     QString generateFilePath_(bool isVideo = false);
     QStringList enumerateCameras_();
@@ -53,11 +55,13 @@ private:
     HANDLE cameraHandle_ = nullptr;
     QTimer* cameraTimer_;
     int cameraExposure_;
+    bool saveNextImage_ = false;
 
     //default parameters
-    const int defaultExposure_ = 20000;//microseconds
-    const float defaultGain_ = 0;
-    const int defaultAutoWB_ = XI_ON;
+    int exposure_ = 20000;//microseconds
+    float gain_ = 0;
+    int autoWB_ = XI_ON;
+    int binningLevel_ = 1;
 
 };
 #endif // MAINWINDOW_H

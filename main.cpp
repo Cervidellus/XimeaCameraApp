@@ -4,7 +4,6 @@
 
 int main(int argc, char *argv[])
 {
-
     //Parse args for hte serial number of camera.
     QApplication a(argc, argv);
 

@@ -18,19 +18,11 @@
 
 #include <imagelabel.h>
 
-//Next:
-
-//scaling of image (need to reimplement paint function... https://stackoverflow.com/questions/40139306/qt-qlabel-scale-image-with-window
-
-//adding binning option, other options
-
-//Prettify the layouts.
-
-
 MainWindow::MainWindow(QWidget *parent)
     : QWidget(parent),
       imageLabel_(new ImageLabel()),
       cameraSelector_(new QComboBox(this)),
+      binningSelector_(new QComboBox(this)),
       exposureValueEdit_(new QLineEdit(this)),
       gainValueEdit_(new QLineEdit(this)),
       savePathEdit_(new QLineEdit(this)),
@@ -65,6 +57,10 @@ MainWindow::MainWindow(QWidget *parent)
                 gainValueEdit_->setSizePolicy(cameraPropertySizePolicy);
                 gainValueEdit_->setValidator(new QDoubleValidator(0,20,2));
                 cameraPropertiesLayout->addWidget(gainValueEdit_, 2,1);
+
+                cameraPropertiesLayout->addWidget(new QLabel("Binning:"),3,0);
+                binningSelector_->addItems({"1","2"});
+                cameraPropertiesLayout->addWidget(binningSelector_,3,1);
 
             QGridLayout* IOLayout = new QGridLayout(this);
                 IOLayout->addWidget(new QLabel("Save Directory:"), 0, 0);
@@ -110,16 +106,18 @@ MainWindow::MainWindow(QWidget *parent)
                      this,
                      [this](){savePathEdit_->setText(QFileDialog::getExistingDirectory(this, "Choose save directory.", savePathEdit_->text()));});
 
-    QObject::connect(saveImageButton_, &QPushButton::pressed, this, &MainWindow::saveImage);
+    QObject::connect(saveImageButton_, &QPushButton::pressed, this, [this](){saveNextImage_ = true;});
 
     QObject::connect(videoRecordButton_, &QPushButton::pressed, this, &MainWindow::toggleVideoRecording);
 
     QObject::connect(cameraSelector_, &QComboBox::activated, this, &MainWindow::connectCamera_);
 
+    QObject::connect(binningSelector_, &QComboBox::activated, this, [this](int level){setBinning_(level);});
+
     //Connect the camera
     QObject::connect(cameraTimer_, &QTimer::timeout, this, &MainWindow::updateImage_);
 
-    connectCamera_();
+    connectCamera_(0);
 
 
     updateImage_();
@@ -127,12 +125,12 @@ MainWindow::MainWindow(QWidget *parent)
 
 MainWindow::~MainWindow()
 {
-    //TODO:handle proper ximea shutdown
+    disconnectCamera_();
 }
 
-void MainWindow::connectCamera_(){
-    xiOpenDevice(0, &cameraHandle_);
-    setDefaultParams_();
+void MainWindow::connectCamera_(int index){
+    xiOpenDevice(index, &cameraHandle_);
+    setParams_();
     XI_RETURN cameraStatus = xiStartAcquisition(cameraHandle_);//
     if (cameraStatus != XI_OK) { handleXimeaError_(cameraStatus, "connectCamera");}
 
@@ -140,19 +138,27 @@ void MainWindow::connectCamera_(){
     cameraTimer_->start();
 }
 
-void MainWindow::setDefaultParams_(){
+void MainWindow::disconnectCamera_(){
+    xiStopAcquisition(cameraHandle_);
+    xiCloseDevice(cameraHandle_);
+}
+
+
+void MainWindow::setParams_(){
 //    eventually, I will have this load from file.
-    xiSetParamInt(cameraHandle_, XI_PRM_EXPOSURE, defaultExposure_);
-    xiSetParamFloat(cameraHandle_, XI_PRM_GAIN, defaultGain_);
-    xiSetParamInt(cameraHandle_, XI_PRM_AUTO_WB, defaultAutoWB_);
+    xiSetParamInt(cameraHandle_, XI_PRM_EXPOSURE, exposure_);
+    xiSetParamFloat(cameraHandle_, XI_PRM_GAIN, gain_);
+    xiSetParamInt(cameraHandle_, XI_PRM_AUTO_WB, autoWB_);
     xiSetParamInt(cameraHandle_, XI_PRM_IMAGE_DATA_FORMAT, XI_RGB32);
     xiSetParamInt(cameraHandle_, XI_PRM_HORIZONTAL_FLIP, XI_ON);
     xiSetParamInt(cameraHandle_, XI_PRM_VERTICAL_FLIP, XI_ON);
+    xiSetParamInt(cameraHandle_, XI_PRM_DOWNSAMPLING_TYPE, XI_BINNING);
+    xiSetParamInt(cameraHandle_, XI_PRM_DOWNSAMPLING, binningLevel_);
 
-    cameraExposure_ = defaultExposure_;
+    cameraExposure_ = exposure_;
 
-    exposureValueEdit_->setText(QString::number(defaultExposure_/1000));
-    gainValueEdit_->setText(QString::number(defaultGain_));
+    exposureValueEdit_->setText(QString::number(exposure_/1000));
+    gainValueEdit_->setText(QString::number(gain_));
 }
 
 void MainWindow::updateImage_(){
@@ -190,6 +196,13 @@ void MainWindow::updateImage_(){
 
         videoWriter_->write(outputMat);
     }
+
+    if(saveNextImage_){
+        qDebug() << generateFilePath_(false);
+        outputImage.save(generateFilePath_(false));
+//        imageLabel_->pixmap().save(generateFilePath_(false));
+        saveNextImage_ = false;
+    }
 }
 
 void MainWindow::handleXimeaError_(XI_RETURN cameraStatus, QString callingMethod){
@@ -197,9 +210,6 @@ void MainWindow::handleXimeaError_(XI_RETURN cameraStatus, QString callingMethod
     qDebug() << "Error " << cameraStatus << " in " << callingMethod << "/n";
 }
 
-void MainWindow::saveImage(){
-    imageLabel_->pixmap().save(generateFilePath_(false));
-}
 
 void MainWindow::toggleVideoRecording(){
     if(!videoWriter_){
@@ -258,5 +268,11 @@ QStringList MainWindow::enumerateCameras_(){
         cameraList.append(cameraString.append(serialNumber));
     }
     return cameraList;
+}
+
+void MainWindow::setBinning_(int binningLevel){
+    binningLevel_ = binningLevel+1;//binningSelector is zero indexed, binning on camera is not
+    disconnectCamera_();
+    connectCamera_(cameraSelector_->currentIndex());
 }
 
