@@ -252,7 +252,6 @@ QString MainWindow::generateFilePath_(bool isVideo){
             }
         }
     }
-
     return fileInfo.absoluteFilePath();
 }
 
