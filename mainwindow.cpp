@@ -92,12 +92,16 @@ MainWindow::MainWindow(QWidget *parent)
     QObject::connect(exposureValueEdit_,
                      &QLineEdit::textEdited,
                      this,
-                     [this](QString value){xiSetParamInt(cameraHandle_, XI_PRM_EXPOSURE, value.toInt()*1000);});
+                     [this](QString value){int newExposure = value.toInt()*1000;
+                                           xiSetParamInt(cameraHandle_, XI_PRM_EXPOSURE, newExposure);
+                                           exposure_ = newExposure;});
 
     QObject::connect(gainValueEdit_,
                      &QLineEdit::textEdited,
                      this,
-                     [this](QString value){xiSetParamFloat(cameraHandle_, XI_PRM_GAIN, value.toFloat());});
+                     [this](QString value){float newGain = value.toFloat();
+                                           xiSetParamFloat(cameraHandle_, XI_PRM_GAIN, newGain);
+                                          gain_ = newGain;});
 
     QObject::connect(browsePathButton_,
                      &QPushButton::pressed,
@@ -108,15 +112,13 @@ MainWindow::MainWindow(QWidget *parent)
 
     QObject::connect(videoRecordButton_, &QPushButton::pressed, this, &MainWindow::toggleVideoRecording);
 
-    QObject::connect(cameraSelector_, &QComboBox::activated, this, &MainWindow::connectCamera_);
+    QObject::connect(cameraSelector_, &QComboBox::activated, this, [this](int index){disconnectCamera_(); connectCamera_(index);});
 
     QObject::connect(binningSelector_, &QComboBox::activated, this, [this](int level){setBinning_(level);});
 
-    //Connect the camera
     QObject::connect(cameraTimer_, &QTimer::timeout, this, &MainWindow::updateImage_);
 
     connectCamera_(0);
-
 
     updateImage_();
 }
