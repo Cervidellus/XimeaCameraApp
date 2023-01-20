@@ -70,8 +70,6 @@ MainWindow::MainWindow(QWidget *parent)
                 browsePathButton_->setText("Browse");
                 IOLayout->addWidget(browsePathButton_, 0,2);
 
-                //append integer. QLabel"append integer to filename
-
                 IOLayout->addWidget(new QLabel("Image base name:"),1,0);
                 imageBaseNameEdit_->setText("Image");
                 IOLayout->addWidget(imageBaseNameEdit_, 1,1);
@@ -131,7 +129,7 @@ MainWindow::~MainWindow()
 void MainWindow::connectCamera_(int index){
     xiOpenDevice(index, &cameraHandle_);
     setParams_();
-    XI_RETURN cameraStatus = xiStartAcquisition(cameraHandle_);//
+    XI_RETURN cameraStatus = xiStartAcquisition(cameraHandle_);
     if (cameraStatus != XI_OK) { handleXimeaError_(cameraStatus, "connectCamera");}
 
     cameraTimer_->setInterval(cameraExposure_/100);
@@ -150,8 +148,8 @@ void MainWindow::setParams_(){
     xiSetParamFloat(cameraHandle_, XI_PRM_GAIN, gain_);
     xiSetParamInt(cameraHandle_, XI_PRM_AUTO_WB, autoWB_);
     xiSetParamInt(cameraHandle_, XI_PRM_IMAGE_DATA_FORMAT, XI_RGB32);
-    xiSetParamInt(cameraHandle_, XI_PRM_HORIZONTAL_FLIP, XI_ON);
-    xiSetParamInt(cameraHandle_, XI_PRM_VERTICAL_FLIP, XI_ON);
+//    xiSetParamInt(cameraHandle_, XI_PRM_HORIZONTAL_FLIP, XI_OFF);
+//    xiSetParamInt(cameraHandle_, XI_PRM_VERTICAL_FLIP, XI_OFF);
     xiSetParamInt(cameraHandle_, XI_PRM_DOWNSAMPLING_TYPE, XI_BINNING);
     xiSetParamInt(cameraHandle_, XI_PRM_DOWNSAMPLING, binningLevel_);
 
@@ -200,7 +198,6 @@ void MainWindow::updateImage_(){
     if(saveNextImage_){
         qDebug() << generateFilePath_(false);
         outputImage.save(generateFilePath_(false));
-//        imageLabel_->pixmap().save(generateFilePath_(false));
         saveNextImage_ = false;
     }
 }
@@ -213,9 +210,6 @@ void MainWindow::handleXimeaError_(XI_RETURN cameraStatus, QString callingMethod
 
 void MainWindow::toggleVideoRecording(){
     if(!videoWriter_){
-        qDebug() << generateFilePath_(true);
-        qDebug() << 1.0/(double(double(cameraTimer_->interval())/10000.0));
-        qDebug() << imageLabel_->pixmap().width();
         videoRecordButton_->setText("Stop");
         double framerate = 1.0/(double(double(cameraTimer_->interval())/1000.0));//returning 50, should be 5
         videoWriter_ = new cv::VideoWriter();
