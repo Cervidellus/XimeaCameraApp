@@ -94,7 +94,13 @@ MainWindow::MainWindow(QWidget *parent)
                      this,
                      [this](QString value){int newExposure = value.toInt()*1000;
                                            xiSetParamInt(cameraHandle_, XI_PRM_EXPOSURE, newExposure);
-                                           exposure_ = newExposure;});
+                                             //TODO there should be a set Exposure method to avoid code duplication
+                                           int ximeaExposure;
+                                           xiGetParamInt(cameraHandle_, XI_PRM_EXPOSURE, &ximeaExposure);//ximea uses microseconds
+                                           qDebug() << "Camera exposure in microseconds:" << ximeaExposure;
+                                           exposure_ = newExposure;
+                                           resetTimer_();
+                                          });
 
     QObject::connect(gainValueEdit_,
                      &QLineEdit::textEdited,
@@ -134,8 +140,7 @@ void MainWindow::connectCamera_(int index){
     XI_RETURN cameraStatus = xiStartAcquisition(cameraHandle_);
     if (cameraStatus != XI_OK) { handleXimeaError_(cameraStatus, "connectCamera");}
 
-    cameraTimer_->setInterval(cameraExposure_/100);
-    cameraTimer_->start();
+    resetTimer_();
 }
 
 void MainWindow::disconnectCamera_(){
@@ -155,8 +160,6 @@ void MainWindow::setParams_(){
     xiSetParamInt(cameraHandle_, XI_PRM_DOWNSAMPLING_TYPE, XI_BINNING);
     xiSetParamInt(cameraHandle_, XI_PRM_DOWNSAMPLING, binningLevel_);
 
-    cameraExposure_ = exposure_;
-
     exposureValueEdit_->setText(QString::number(exposure_/1000));
     gainValueEdit_->setText(QString::number(gain_));
 }
@@ -165,7 +168,7 @@ void MainWindow::updateImage_(){
     int deviceConnected = 0;
     xiGetParamInt(cameraHandle_, XI_PRM_IS_DEVICE_EXIST, &deviceConnected);
     if(!deviceConnected){
-        cameraTimer_->stop();
+        if (cameraTimer_->isActive()) cameraTimer_->stop();
         return;
     }
 
@@ -214,6 +217,7 @@ void MainWindow::toggleVideoRecording(){
     if(!videoWriter_){
         videoRecordButton_->setText("Stop");
         double framerate = 1.0/(double(double(cameraTimer_->interval())/1000.0));//returning 50, should be 5
+        qDebug()<< "Framerate set to:" << framerate;
         videoWriter_ = new cv::VideoWriter();
 
         videoWriter_->open(generateFilePath_(true).toStdString(),
@@ -269,5 +273,12 @@ void MainWindow::setBinning_(int binningLevel){
     binningLevel_ = binningLevel+1;//binningSelector is zero indexed, binning on camera is not
     disconnectCamera_();
     connectCamera_(cameraSelector_->currentIndex());
+}
+
+void MainWindow::resetTimer_(){
+    if (cameraTimer_->isActive()) cameraTimer_->stop();
+    cameraTimer_->setInterval(exposure_/1000);//microseconds to milliseconds
+    cameraTimer_->start();
+    qDebug() << "Camera timer interval in milliseconds:" << cameraTimer_->interval();
 }
 

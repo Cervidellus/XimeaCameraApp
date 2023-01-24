@@ -5,7 +5,6 @@
 #include <QString>
 #include <xiApi.h>
 
-
 class QFileDialog;
 class ImageLabel;
 class QLineEdit;
@@ -43,6 +42,7 @@ private:
 
     //Connect the first available camera.
     //GUI will allow you to select another, and will restrict you to only those that are available.
+    //TODO: I should pull the camera out into it's own class.
     void connectCamera_(int index);
     void disconnectCamera_();
     void handleXimeaError_(XI_RETURN cameraStatus, QString callingMethod);
@@ -51,17 +51,15 @@ private:
     void updateImage_();
     QString generateFilePath_(bool isVideo = false);
     QStringList enumerateCameras_();
+    void resetTimer_();
 
     HANDLE cameraHandle_ = nullptr;
     QTimer* cameraTimer_;
-    int cameraExposure_;
     bool saveNextImage_ = false;
 
-    //default parameters
     int exposure_ = 20000;//microseconds
     float gain_ = 0;
     int autoWB_ = XI_ON;
     int binningLevel_ = 1;
-
 };
 #endif // MAINWINDOW_H
