@@ -182,7 +182,7 @@ void MainWindow::updateImage_(){
     auto rawImageData = (unsigned int*)ximeaImage.bp;
     QImage outputImage{int(ximeaImage.width), int(ximeaImage.height), QImage::Format_RGB32};
 
-    for (int inputLine = 0; inputLine < ximeaImage.height; ++inputLine){
+    for (unsigned int inputLine = 0; inputLine < ximeaImage.height; ++inputLine){
         memcpy(outputImage.scanLine(inputLine),
                &rawImageData[inputLine*ximeaImage.width],
                 ximeaImage.width * 4);
@@ -220,10 +220,14 @@ void MainWindow::toggleVideoRecording(){
         qDebug()<< "Framerate set to:" << framerate;
         videoWriter_ = new cv::VideoWriter();
 
+        int width, height;
+        xiGetParamInt(cameraHandle_, XI_PRM_WIDTH, &width);
+        xiGetParamInt(cameraHandle_, XI_PRM_HEIGHT, &height);
+
         videoWriter_->open(generateFilePath_(true).toStdString(),
                                     cv::VideoWriter::fourcc('M', 'P', '4', 'V'),
                                     framerate,
-                                    cv::Size(imageLabel_->pixmap().width(), imageLabel_->pixmap().height()));
+                                    cv::Size(width, height));
     }
     else{
         videoRecordButton_->setText("Record");
@@ -261,7 +265,7 @@ QStringList MainWindow::enumerateCameras_(){
     xiGetNumberDevices(&numberDevices);
     char serialNumber[256];
 
-    for (int deviceIndex = 0; deviceIndex < numberDevices; deviceIndex++){
+    for (unsigned int deviceIndex = 0; deviceIndex < numberDevices; deviceIndex++){
         QString cameraString = QString::number(deviceIndex)+":";
         xiGetDeviceInfoString(deviceIndex, XI_PRM_DEVICE_SN, serialNumber, 256);
         cameraList.append(cameraString.append(serialNumber));
